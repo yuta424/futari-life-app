@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import check, who %}
+{% from "_macros.html" import check, who with context %}
 {% set active_tab = 'home' %}
 {% block page_attrs %}data-poll{% endblock %}
 {% block content %}

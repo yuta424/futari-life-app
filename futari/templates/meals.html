@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf with context %}
+{% set active_tab = 'meals' %}
+{% block title %}献立 | ふたり暮らし{% endblock %}
+{% block content %}
+<header class="page-head">
+  <div><h1>献立</h1><p class="sub">{{ days[0].month }}月{{ days[0].day }}日 〜 {{ days[6].month }}月{{ days[6].day }}日</p></div>
+  <a class="link" href="{{ url_for('main.recipes') }}">レシピ帳</a>
+</header>
+
+<nav class="week-nav" aria-label="週の切り替え">
+  <a href="{{ url_for('main.meals', week=prev_week) }}">‹ 前の週</a>
+  {% if not this_week %}<a href="{{ url_for('main.meals') }}">今週へ</a>{% endif %}
+  <a href="{{ url_for('main.meals', week=next_week) }}">次の週 ›</a>
+</nav>
+
+<datalist id="recipe-names">{% for r in recipes %}<option value="{{ r.name }}">{% endfor %}</datalist>
+
+{% for d in days %}
+<article class="day-card{{ ' is-today' if d == today }}" id="d{{ d.isoformat() }}">
+  <header>{{ d.month }}/{{ d.day }}（{{ WEEKDAYS_JA[d.weekday()] }}）{% if d == today %}<span class="hint">今日</span>{% endif %}</header>
+  {% for key, label in slots %}
+  {% set m = by_key.get((d.isoformat(), key)) %}
+  <details class="meal">
+    <summary>
+      <span class="slot">{{ label }}</span>
+      <span class="title{{ ' none' if not m }}">{{ m.title if m else '未定' }}</span>
+    </summary>
+    <div class="meal-edit">
+      <form class="line" method="post" action="{{ url_for('main.meal_set') }}">
+        {{ csrf() }}
+        <input type="hidden" name="day" value="{{ d.isoformat() }}">
+        <input type="hidden" name="slot" value="{{ key }}">
+        <input type="text" name="title" value="{{ m.title if m else '' }}" maxlength="60" list="recipe-names" placeholder="料理名（空にすると未定に戻る）" aria-label="{{ d.month }}月{{ d.day }}日 {{ label }}の献立" autocomplete="off">
+        <button class="btn small">保存</button>
+      </form>
+      {% if m %}
+      <div class="extras">
+        {% if m.recipe_ingredients %}
+        <form method="post" action="{{ url_for('main.meal_to_shopping', meal_id=m.id) }}">{{ csrf() }}<button class="btn soft small">材料を買い物リストへ</button></form>
+        {% elif not m.recipe_id %}
+        <span class="hint">レシピ帳に同じ名前で材料を登録すると、買い物リストに入れられます。</span>
+        {% endif %}
+        {% if m.recipe_url %}<a class="btn plain small" href="{{ m.recipe_url }}" target="_blank" rel="noopener noreferrer">レシピを開く</a>{% endif %}
+      </div>
+      {% endif %}
+    </div>
+  </details>
+  {% endfor %}
+</article>
+{% endfor %}
+{% endblock %}

@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf, who, color_choices with context %}
+{% set active_tab = 'more' %}
+{% block title %}設定 | ふたり暮らし{% endblock %}
+{% block content %}
+<header class="page-head"><div><h1>設定</h1><p class="sub">{{ household.name }}</p></div></header>
+
+<div class="card">
+  <h3>通知</h3>
+  {% if push_ready %}
+  <p class="hint" id="push-status" data-vapid="{{ vapid_public_key }}">通知の状態を確認しています…</p>
+  <div class="actions" style="display:flex;gap:.5rem;margin-top:.7rem;flex-wrap:wrap">
+    <button class="btn small" id="push-on" hidden>この端末で通知を受け取る</button>
+    <button class="btn soft small" id="push-test" hidden>テスト通知を送る</button>
+    <button class="btn plain small" id="push-off" hidden>通知をやめる</button>
+  </div>
+  <p class="hint" style="margin-top:.7rem">毎朝7時ごろに今日の家事・ゴミの日・予定をお知らせします。iPhoneでは、Safariの共有メニューから「ホーム画面に追加」したアプリで開くと通知をオンにできます。</p>
+  {% else %}
+  <p class="hint">通知はまだ使えません。サーバーに通知用の鍵（VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY）を設定すると有効になります。手順は README にあります。</p>
+  {% endif %}
+</div>
+
+<div class="card">
+  <h3>二人のメンバー</h3>
+  <p>{% for m in members %}{{ who(m.id) }}{% if not loop.last %}　{% endif %}{% endfor %}</p>
+  {% if can_invite %}
+  <p class="hint" style="margin:.8rem 0 .4rem">相手がアカウントを作ったあと、この招待コードを入力すると同じ世帯に参加できます。</p>
+  <p class="code">{{ household.invite_code }}</p>
+  {% endif %}
+</div>
+
+<div class="card">
+  <h3>プロフィール</h3>
+  <form class="form" method="post" action="{{ url_for('main.settings_profile') }}">
+    {{ csrf() }}
+    <label class="field"><span>呼び名</span><input type="text" name="display_name" value="{{ me.display_name }}" maxlength="20" required></label>
+    <div class="field"><span class="hint">あなたの色</span>{{ color_choices(me.color) }}</div>
+    <button class="btn soft">保存する</button>
+  </form>
+</div>
+
+<div class="card">
+  <h3>世帯の名前</h3>
+  <form class="form" method="post" action="{{ url_for('main.settings_household') }}">
+    {{ csrf() }}
+    <input type="text" name="name" value="{{ household.name }}" maxlength="30" aria-label="世帯の名前" required>
+    <button class="btn soft">保存する</button>
+  </form>
+</div>
+
+<div class="card">
+  <h3>Googleカレンダーに予定を表示する</h3>
+  <p class="hint">アプリで登録した予定を、Googleカレンダーに一方向で反映します。Googleカレンダーの「他のカレンダー ＋」→「URLで追加」に、下のURLを貼り付けてください。反映には数時間かかることがあります。すぐに反映したい場合は、README の GAS を使う方法をご覧ください。</p>
+  <div class="copy-line" style="margin-top:.6rem">
+    <input type="text" id="feed-url" value="{{ feed_url }}" readonly aria-label="カレンダー用URL">
+    <button class="btn soft small" data-copy="#feed-url">コピー</button>
+  </div>
+  <p class="hint" style="margin-top:.5rem">このURLを知っている人は予定を見られます。ほかの人に共有しないでください。</p>
+  <form method="post" action="{{ url_for('main.settings_feed_reset') }}" style="margin-top:.4rem">{{ csrf() }}
+    <button class="btn plain small" data-confirm="URLを作り直すと、いまのURLで登録したカレンダーは更新されなくなります。作り直しますか？">URLを作り直す</button></form>
+</div>
+
+<div class="card">
+  <h3>データ</h3>
+  <a class="btn soft" href="{{ url_for('main.settings_export') }}">データを書き出す（JSON）</a>
+  <p class="hint" style="margin-top:.5rem">家事・買い物・献立・予定などをまとめて保存できます。</p>
+</div>
+
+<form method="post" action="{{ url_for('main.logout') }}" style="margin-top:1.25rem;text-align:center">{{ csrf() }}
+  <p class="hint">{{ me.email }}</p>
+  <button class="btn plain">ログアウト</button>
+</form>
+{% endblock %}

@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf, check, who, assignee_select with context %}
+{% set active_tab = 'more' %}
+{% block title %}タスク | ふたり暮らし{% endblock %}
+{% block page_attrs %}data-poll{% endblock %}
+{% block content %}
+<header class="page-head">
+  <div><h1>タスク</h1><p class="sub">手続き・予約・修理など、一度きりのやること</p></div>
+</header>
+
+<details class="panel" {{ 'open' if not todo }}>
+  <summary>タスクを追加</summary>
+  <form class="form" method="post" action="{{ url_for('main.task_add') }}">
+    {{ csrf() }}
+    <label class="field"><span>やること</span><input type="text" name="title" maxlength="80" placeholder="例：火災保険の更新" required></label>
+    <div class="two">
+      <label class="field"><span>担当</span>{{ assignee_select(None, 'どちらでも') }}</label>
+      <label class="field"><span>期限（なくてもよい）</span><input type="date" name="due_date"></label>
+    </div>
+    <button class="btn block">追加する</button>
+    <p class="hint">相手を担当にすると、相手に通知が届きます。</p>
+  </form>
+</details>
+
+<section class="section">
+  <h2>やること <span class="aside">{{ todo|length }}件</span></h2>
+  <div class="list">
+    {% for t in todo %}
+    <div class="row">
+      {{ check(url_for('main.task_toggle', task_id=t.id), false, member_colors.get(t.assignee_id, '#8b7d70'), t.title ~ 'を完了にする') }}
+      <div class="body">
+        <div class="name">{{ t.title }}</div>
+        <div class="meta">
+          {% if t.due_date %}<span class="{{ 'alert-text' if t.overdue }}">{{ fmt_day(t.due_date) }}まで{% if t.overdue %}（期限切れ）{% endif %}</span>{% endif %}
+          {{ who(t.assignee_id) }}
+        </div>
+      </div>
+      <form method="post" action="{{ url_for('main.task_delete', task_id=t.id) }}" data-async>{{ csrf() }}
+        <button class="icon-btn" aria-label="{{ t.title }}を削除" data-confirm="「{{ t.title }}」を削除しますか？">×</button></form>
+    </div>
+    {% else %}
+    <p class="empty">やることはありません。</p>
+    {% endfor %}
+  </div>
+</section>
+
+{% if done %}
+<section class="section">
+  <h2>最近終わったもの</h2>
+  <div class="list">
+    {% for t in done %}
+    <div class="row done">
+      {{ check(url_for('main.task_toggle', task_id=t.id), true, member_colors.get(t.done_by, '#8b7d70'), t.title ~ 'を未完了に戻す') }}
+      <div class="body"><div class="name">{{ t.title }}</div><div class="meta">{{ who(t.done_by, '') }} が完了</div></div>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+{% endblock %}

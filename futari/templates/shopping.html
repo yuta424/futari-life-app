@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf, check, who with context %}
+{% set active_tab = 'shopping' %}
+{% block title %}買い物リスト | ふたり暮らし{% endblock %}
+{% block page_attrs %}data-poll{% endblock %}
+{% block content %}
+<header class="page-head">
+  <div><h1>買い物リスト</h1><p class="sub">{% if todo_count %}残り{{ todo_count }}件{% else %}買うものはありません{% endif %}</p></div>
+  {% if todo_count %}
+  <form method="post" action="{{ url_for('main.shopping_notify') }}">{{ csrf() }}<button class="btn soft small">相手に知らせる</button></form>
+  {% endif %}
+</header>
+
+<form class="quick" method="post" action="{{ url_for('main.shopping_add') }}" data-async data-refocus="name">
+  {{ csrf() }}
+  <input type="text" name="name" maxlength="40" placeholder="買うものを入力" aria-label="買うもの" list="shopping-suggest" autocomplete="off" enterkeyhint="done" required>
+  <input class="qty" type="text" name="qty" maxlength="20" placeholder="数量" aria-label="数量" autocomplete="off">
+  <button class="btn">追加</button>
+</form>
+<datalist id="shopping-suggest">{% for s in suggestions %}<option value="{{ s }}">{% endfor %}</datalist>
+
+{% if suggestions %}
+<div class="pills" style="margin-top:.6rem">
+  {% for s in suggestions[:6] %}
+  <form method="post" action="{{ url_for('main.shopping_add') }}" data-async>{{ csrf() }}<input type="hidden" name="name" value="{{ s }}"><button class="pill" style="border:0;cursor:pointer">＋ {{ s }}</button></form>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% for label, rows in groups %}
+<section class="section">
+  <h2>{{ label }}</h2>
+  <div class="list">
+    {% for i in rows %}
+    <div class="row editing">
+      {{ check(url_for('main.shopping_toggle', item_id=i.id), false, '#56796a', i.name ~ 'を購入済みにする') }}
+      <div class="body">
+        <div class="name">{{ i.name }}{% if i.qty %} <span style="color:var(--muted);font-weight:400">{{ i.qty }}</span>{% endif %}</div>
+      </div>
+      <details class="inline" data-move-form><summary aria-label="{{ i.name }}を編集">…</summary></details>
+      <form class="edit-form form" method="post" action="{{ url_for('main.shopping_category', item_id=i.id) }}" hidden>
+        {{ csrf() }}
+        <label class="field"><span>売り場</span>
+          <select name="category">{% for key, lab in categories %}<option value="{{ key }}" {{ 'selected' if key == i.category }}>{{ lab }}</option>{% endfor %}</select></label>
+        <div class="actions">
+          <button class="btn danger small" formaction="{{ url_for('main.shopping_delete', item_id=i.id) }}">リストから消す</button>
+          <button class="btn small">売り場を変更</button>
+        </div>
+      </form>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+{% else %}
+<p class="empty" style="margin-top:1rem">リストは空です。上の欄から買うものを追加できます。献立の材料もここに入ります。</p>
+{% endfor %}
+
+{% if done %}
+<section class="section">
+  <h2>購入済み
+    <form method="post" action="{{ url_for('main.shopping_clear_done') }}" data-async>{{ csrf() }}<button class="btn plain small" data-confirm="購入済みの{{ done|length }}件を消しますか？">すべて消す</button></form>
+  </h2>
+  <div class="list">
+    {% for i in done %}
+    <div class="row done">
+      {{ check(url_for('main.shopping_toggle', item_id=i.id), true, '#8b7d70', i.name ~ 'を未購入に戻す') }}
+      <div class="body"><div class="name">{{ i.name }}{% if i.qty %} {{ i.qty }}{% endif %}</div></div>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+{% endblock %}

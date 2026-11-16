@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf with context %}
+{% set active_tab = 'meals' %}
+{% block title %}レシピ帳 | ふたり暮らし{% endblock %}
+
+{% macro recipe_form(r=None) %}
+{{ csrf() }}
+{% if r %}<input type="hidden" name="id" value="{{ r.id }}">{% endif %}
+<label class="field"><span>料理名</span><input type="text" name="name" value="{{ r.name if r else '' }}" maxlength="60" placeholder="例：肉じゃが" required></label>
+<label class="field"><span>材料（1行に1つ。「玉ねぎ 2個」のように数量を書けます）</span>
+  <textarea name="ingredients" maxlength="2000" placeholder="じゃがいも 3個&#10;玉ねぎ 1個&#10;牛肉 200g">{{ r.ingredients if r else '' }}</textarea></label>
+<label class="field"><span>レシピのURL</span><input type="url" name="url" value="{{ r.url if r else '' }}" maxlength="500" placeholder="https://" inputmode="url"></label>
+<label class="field"><span>メモ</span><textarea name="memo" maxlength="2000" style="min-height:4rem">{{ r.memo if r else '' }}</textarea></label>
+{% endmacro %}
+
+{% block content %}
+<header class="page-head">
+  <div><h1>レシピ帳</h1><p class="sub">材料を登録すると、献立から買い物リストに入れられます</p></div>
+  <a class="link" href="{{ url_for('main.meals') }}">献立へ</a>
+</header>
+
+<details class="panel" {{ 'open' if not recipes }}>
+  <summary>レシピを追加</summary>
+  <form class="form" method="post" action="{{ url_for('main.recipe_save') }}">
+    {{ recipe_form() }}
+    <button class="btn block">追加する</button>
+  </form>
+</details>
+
+<section class="section">
+  <div class="list">
+    {% for r in recipes %}
+    <div class="row editing">
+      <div class="body">
+        <div class="name">{{ r.name }}</div>
+        <div class="meta">
+          <span>材料 {{ r.ingredients.splitlines() | select | list | length }}件</span>
+          {% if r.url %}<a href="{{ r.url }}" target="_blank" rel="noopener noreferrer">レシピを開く</a>{% endif %}
+        </div>
+        {% if r.memo %}<p class="note-body">{{ r.memo }}</p>{% endif %}
+      </div>
+      <details class="inline" data-move-form><summary>編集</summary></details>
+      <form class="form edit-form" method="post" action="{{ url_for('main.recipe_save') }}" hidden>
+        {{ recipe_form(r) }}
+        <div class="actions">
+          <button class="btn danger small" formaction="{{ url_for('main.recipe_delete', recipe_id=r.id) }}" formnovalidate data-confirm="「{{ r.name }}」を削除しますか？">削除</button>
+          <button class="btn small">保存する</button>
+        </div>
+      </form>
+    </div>
+    {% else %}
+    <p class="empty">まだレシピがありません。よく作る料理から登録してみましょう。</p>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf with context %}
+{% set active_tab = 'more' %}
+{% block title %}生活メモ | ふたり暮らし{% endblock %}
+
+{% macro note_form(n=None) %}
+{{ csrf() }}
+{% if n %}<input type="hidden" name="id" value="{{ n.id }}">{% endif %}
+<label class="field"><span>タイトル</span><input type="text" name="title" value="{{ n.title if n else '' }}" maxlength="60" placeholder="例：洗濯機の保証" required></label>
+<label class="field"><span>分類</span>
+  <select name="category">{% for key, label in categories %}<option value="{{ key }}" {{ 'selected' if n and n.category == key }}>{{ label }}</option>{% endfor %}</select></label>
+<label class="field"><span>内容</span><textarea name="body" maxlength="5000" placeholder="型番、保証期限、連絡先など">{{ n.body if n else '' }}</textarea></label>
+{% endmacro %}
+
+{% block content %}
+<header class="page-head">
+  <div><h1>生活メモ</h1><p class="sub">家電の型番や契約先など、たまに必要になる情報</p></div>
+</header>
+
+<details class="panel" {{ 'open' if not groups }}>
+  <summary>メモを追加</summary>
+  <form class="form" method="post" action="{{ url_for('main.note_save') }}">
+    {{ note_form() }}
+    <button class="btn block">追加する</button>
+    <p class="hint">パスワードや暗証番号、カード番号は書かないでください。</p>
+  </form>
+</details>
+
+{% for label, items in groups %}
+<section class="section">
+  <h2>{{ label }}</h2>
+  <div class="list">
+    {% for n in items %}
+    <div class="row editing" style="align-items:flex-start">
+      <div class="body"><div class="name">{{ n.title }}</div>{% if n.body %}<p class="note-body">{{ n.body }}</p>{% endif %}</div>
+      <details class="inline" data-move-form><summary>編集</summary></details>
+      <form class="form edit-form" method="post" action="{{ url_for('main.note_save') }}" hidden>
+        {{ note_form(n) }}
+        <div class="actions">
+          <button class="btn danger small" formaction="{{ url_for('main.note_delete', note_id=n.id) }}" formnovalidate data-confirm="「{{ n.title }}」を削除しますか？">削除</button>
+          <button class="btn small">保存する</button>
+        </div>
+      </form>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+{% endfor %}
+{% endblock %}

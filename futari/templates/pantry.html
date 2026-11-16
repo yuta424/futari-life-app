@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf with context %}
+{% set active_tab = 'more' %}
+{% block title %}冷蔵庫の在庫 | ふたり暮らし{% endblock %}
+{% block content %}
+<header class="page-head">
+  <div><h1>冷蔵庫の在庫</h1><p class="sub">期限が近い順に並びます</p></div>
+</header>
+
+<details class="panel" {{ 'open' if not items }}>
+  <summary>食材を追加</summary>
+  <form class="form" method="post" action="{{ url_for('main.pantry_add') }}">
+    {{ csrf() }}
+    <div class="two">
+      <label class="field"><span>食材</span><input type="text" name="name" maxlength="40" placeholder="例：鶏むね肉" required></label>
+      <label class="field"><span>数量</span><input type="text" name="qty" maxlength="20" placeholder="例：2枚"></label>
+    </div>
+    <label class="field"><span>賞味・消費期限（なくてもよい）</span><input type="date" name="expires_on"></label>
+    <button class="btn block">追加する</button>
+  </form>
+</details>
+
+<section class="section">
+  <div class="list">
+    {% for i in items %}
+    <div class="row">
+      <div class="body">
+        <div class="name">{{ i.name }}{% if i.qty %} <span style="color:var(--muted);font-weight:400">{{ i.qty }}</span>{% endif %}</div>
+        <div class="meta">
+          {% if i.days_left is none %}<span>期限なし</span>
+          {% elif i.days_left < 0 %}<span class="alert-text">期限切れ（{{ fmt_day(i.expires_on) }}）</span>
+          {% elif i.days_left <= 3 %}<span class="alert-text">{{ fmt_relative(i.expires_on) }}まで</span>
+          {% else %}<span>{{ fmt_day(i.expires_on) }}まで</span>{% endif %}
+        </div>
+      </div>
+      <form method="post" action="{{ url_for('main.pantry_used', item_id=i.id) }}" data-async style="display:flex;gap:.25rem">
+        {{ csrf() }}
+        <button class="btn plain small" name="rebuy" value="1">買い足す</button>
+        <button class="btn soft small">使い切った</button>
+      </form>
+    </div>
+    {% else %}
+    <p class="empty">在庫は登録されていません。期限のある食材を入れておくと、近づいたときにホームと朝の通知でお知らせします。</p>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

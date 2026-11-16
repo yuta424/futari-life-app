@@ -1,0 +1,15 @@
+{
+  "name": "ふたり暮らし",
+  "short_name": "ふたり暮らし",
+  "description": "家事・買い物・献立・予定を二人で共有する",
+  "lang": "ja",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f4eee1",
+  "theme_color": "#f4eee1",
+  "icons": [
+    { "src": "/static/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/static/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

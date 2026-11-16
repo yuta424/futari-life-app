@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf, check, who, weekday_choices, assignee_select with context %}
+{% set active_tab = 'chores' %}
+{% block title %}家事 | ふたり暮らし{% endblock %}
+{% block page_attrs %}data-poll{% endblock %}
+
+{% macro chore_form(c=None) %}
+<label class="field"><span>家事の名前</span>
+  <input type="text" name="name" value="{{ c.name if c else '' }}" maxlength="40" placeholder="例：お風呂掃除" required></label>
+<label class="field"><span>くり返し</span>
+  <select name="freq_type" data-toggle-freq>
+    <option value="daily" {{ 'selected' if c and c.freq_type == 'daily' }}>毎日</option>
+    <option value="weekly" {{ 'selected' if c and c.freq_type == 'weekly' }}>曜日を決める</option>
+    <option value="interval" {{ 'selected' if c and c.freq_type == 'interval' }}>何日かごと</option>
+  </select></label>
+<div data-freq="weekly" {{ 'hidden' if not c or c.freq_type != 'weekly' }}>{{ weekday_choices(c.weekday_list if c else []) }}</div>
+<label class="field" data-freq="interval" {{ 'hidden' if not c or c.freq_type != 'interval' }}><span>何日ごと</span>
+  <input type="number" name="interval_days" min="1" max="365" value="{{ c.interval_days if c else 3 }}" inputmode="numeric"></label>
+<label class="field"><span>担当</span>{{ assignee_select(c.assignee_id if c else None) }}</label>
+{% endmacro %}
+
+{% block content %}
+<header class="page-head">
+  <div><h1>家事</h1><p class="sub">{{ fmt_day(day) }}</p></div>
+</header>
+
+<section class="section" style="margin-top:0">
+  <h2>今日やること</h2>
+  <div class="list">
+    {% for c in todays %}
+    {% set color = member_colors.get(c.log.done_by, '#8b7d70') if c.log else member_colors.get(c.assignee_id, '#8b7d70') %}
+    <div class="row{{ ' done' if c.log }}">
+      {{ check(url_for('main.chore_toggle', chore_id=c.id), c.log, color, c.name ~ 'を完了にする', day=day.isoformat()) }}
+      <div class="body">
+        <div class="name">{{ c.name }}</div>
+        <div class="meta">{% if c.log %}{{ who(c.log.done_by) }} が完了{% else %}担当 {{ who(c.assignee_id) }}{% endif %}</div>
+      </div>
+    </div>
+    {% else %}
+    <p class="empty">今日やる家事はありません。</p>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="section">
+  <h2>この30日の分担 <span class="aside">完了 {{ total }}回</span></h2>
+  <div class="balance">
+    {% if total %}
+    <div class="bar" role="img" aria-label="{% for b in balance %}{{ b.member.display_name }} {{ b.pct }}% {% endfor %}">
+      {% for b in balance %}<i style="--who: {{ member_colors[b.member.id] }}; flex: {{ b.count }}"></i>{% endfor %}
+    </div>
+    {% endif %}
+    <div class="legend">
+      {% for b in balance %}
+      <span>{{ who(b.member.id) }} <b>{{ b.count }}回</b>{% if total %}（{{ b.pct }}%）{% endif %}</span>
+      {% endfor %}
+    </div>
+    {% if not total %}<p class="hint" style="margin-top:.5rem">家事を完了すると、どちらが何回やったかがここに表示されます。</p>{% endif %}
+  </div>
+</section>
+
+<section class="section">
+  <h2>登録している家事</h2>
+  <div class="list">
+    {% for c in all_chores %}
+    <div class="row editing">
+      <div class="body">
+        <div class="name">{{ c.name }}</div>
+        <div class="meta"><span>{{ c.freq_label }}</span> {{ who(c.assignee_id) }}</div>
+      </div>
+      <details class="inline" data-move-form>
+        <summary>編集</summary>
+      </details>
+      <form class="form edit-form" method="post" action="{{ url_for('main.chore_edit', chore_id=c.id) }}" hidden>
+        {{ csrf() }}
+        {{ chore_form(c) }}
+        <div class="actions">
+          <button class="btn danger small" formaction="{{ url_for('main.chore_delete', chore_id=c.id) }}" formnovalidate data-confirm="「{{ c.name }}」を一覧から外しますか？これまでの記録は残ります。">外す</button>
+          <button class="btn small">保存する</button>
+        </div>
+      </form>
+    </div>
+    {% else %}
+    <p class="empty">まだ家事が登録されていません。下の「家事を追加」から始めましょう。</p>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="section">
+  <details class="panel" {{ 'open' if not all_chores }}>
+    <summary>家事を追加</summary>
+    <form class="form" method="post" action="{{ url_for('main.chore_add') }}">
+      {{ csrf() }}
+      {{ chore_form() }}
+      <button class="btn block">追加する</button>
+    </form>
+  </details>
+</section>
+{% endblock %}

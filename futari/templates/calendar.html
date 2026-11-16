@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf, who, weekday_choices with context %}
+{% set active_tab = 'more' %}
+{% block title %}予定 | ふたり暮らし{% endblock %}
+
+{% macro event_form(e=None) %}
+{{ csrf() }}
+{% if e %}<input type="hidden" name="id" value="{{ e.id }}">{% endif %}
+<input type="hidden" name="return_day" value="{{ selected.isoformat() }}">
+<label class="field"><span>予定の名前</span><input type="text" name="title" value="{{ e.title if e else '' }}" maxlength="60" placeholder="例：美容院" required></label>
+<label class="field"><span>日付</span><input type="date" name="day" value="{{ e.day if e else selected.isoformat() }}" required></label>
+<div class="two">
+  <label class="field"><span>開始（空なら終日）</span><input type="time" name="start_time" value="{{ e.start_time if e else '' }}"></label>
+  <label class="field"><span>終了</span><input type="time" name="end_time" value="{{ e.end_time if e else '' }}"></label>
+</div>
+<div class="field"><span class="hint">だれの予定</span>
+  <div class="choices">
+    <label><input type="radio" name="scope" value="shared" {{ 'checked' if not e or e.owner_id is none }}><span>二人の予定</span></label>
+    <label><input type="radio" name="scope" value="mine" {{ 'checked' if e and e.owner_id }}><span>自分の予定</span></label>
+  </div>
+</div>
+<label class="field"><span>自分の予定を相手にどう見せるか</span>
+  <select name="visibility">
+    <option value="full" {{ 'selected' if e and e.visibility == 'full' }}>内容も見せる</option>
+    <option value="busy" {{ 'selected' if e and e.visibility == 'busy' }}>時間だけ見せる（「予定あり」と表示）</option>
+    <option value="private" {{ 'selected' if e and e.visibility == 'private' }}>見せない</option>
+  </select></label>
+<div class="two">
+  <label class="field"><span>種類</span>
+    <select name="kind">
+      <option value="event" {{ 'selected' if e and e.kind == 'event' }}>予定</option>
+      <option value="anniversary" {{ 'selected' if e and e.kind == 'anniversary' }}>記念日・誕生日（毎年）</option>
+    </select></label>
+  <label class="field"><span>くり返し</span>
+    <select name="repeat_type">
+      <option value="none" {{ 'selected' if e and e.repeat_type == 'none' }}>なし</option>
+      <option value="weekly" {{ 'selected' if e and e.repeat_type == 'weekly' }}>毎週</option>
+      <option value="monthly" {{ 'selected' if e and e.repeat_type == 'monthly' }}>毎月</option>
+      <option value="yearly" {{ 'selected' if e and e.repeat_type == 'yearly' }}>毎年</option>
+    </select></label>
+</div>
+<label class="field"><span>メモ</span><input type="text" name="memo" value="{{ e.memo if e else '' }}" maxlength="500"></label>
+{% endmacro %}
+
+{% block content %}
+<header class="page-head">
+  <div><h1>{{ first.year }}年{{ first.month }}月</h1></div>
+  <nav class="week-nav" style="margin:0" aria-label="月の切り替え">
+    <a href="{{ url_for('main.calendar', month=prev_month) }}" aria-label="前の月">‹</a>
+    <a href="{{ url_for('main.calendar') }}">今日</a>
+    <a href="{{ url_for('main.calendar', month=next_month) }}" aria-label="次の月">›</a>
+  </nav>
+</header>
+
+<div class="cal">
+  <table>
+    <thead><tr>{% for w in WEEKDAYS_JA %}<th scope="col">{{ w }}</th>{% endfor %}</tr></thead>
+    <tbody>
+      {% for week in weeks %}
+      <tr>
+        {% for c in week %}
+        <td class="{{ 'out ' if not c.in_month }}{{ 'is-today ' if c.date == today }}{{ 'sel' if c.date == selected }}">
+          <a href="{{ url_for('main.calendar', day=c.date.isoformat()) }}#day" {% if c.date == selected %}aria-current="date"{% endif %}>
+            {{ c.date.day }}
+            <span class="dots">{% for m in c.marks %}<i {% if m == 'shared' %}class="shared"{% else %}style="--who: {{ member_colors.get(m, '#8b7d70') }}"{% endif %}></i>{% endfor %}</span>
+          </a>
+        </td>
+        {% endfor %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<p class="hint" style="margin-top:.4rem">● 黒は二人の予定、色はそれぞれの予定</p>
+
+<section class="section" id="day">
+  <h2>{{ fmt_day(selected) }}</h2>
+  <div class="list">
+    {% for e in day_events %}
+    <div class="row editing">
+      <span class="time">{{ e.start_time or ('ゴミ' if e.kind == 'garbage' else '終日') }}</span>
+      <div class="body">
+        <div class="name">{{ e.title }}</div>
+        <div class="meta">
+          {% if e.start_time and e.end_time %}<span>〜{{ e.end_time }}</span>{% endif %}
+          {% if e.kind == 'garbage' %}<span>ゴミの日</span>{% elif e.shared %}<span>二人の予定</span>{% else %}{{ who(e.owner_id) }}{% endif %}
+          {% if e.repeat_label %}<span>{{ e.repeat_label }}</span>{% endif %}
+          {% if e.mine and e.visibility == 'private' %}<span>相手には非公開</span>{% elif e.mine and e.visibility == 'busy' %}<span>相手には時間だけ</span>{% endif %}
+        </div>
+        {% if e.memo %}<p class="note-body">{{ e.memo }}</p>{% endif %}
+      </div>
+      {% if e.editable and e.kind != 'garbage' %}
+      <details class="inline" data-move-form><summary>編集</summary></details>
+      <form class="form edit-form" method="post" action="{{ url_for('main.event_save') }}" hidden>
+        {{ event_form(e) }}
+        <div class="actions">
+          <button class="btn danger small" formaction="{{ url_for('main.event_delete', event_id=e.id) }}" formnovalidate data-confirm="「{{ e.title }}」を削除しますか？{% if e.repeat_type != 'none' %}くり返しの予定はすべて消えます。{% endif %}">削除</button>
+          <button class="btn small">保存する</button>
+        </div>
+      </form>
+      {% endif %}
+    </div>
+    {% else %}
+    <p class="empty">この日の予定はありません。</p>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="section">
+  <details class="panel">
+    <summary>{{ selected.month }}月{{ selected.day }}日に予定を追加</summary>
+    <form class="form" method="post" action="{{ url_for('main.event_save') }}">
+      {{ event_form() }}
+      <button class="btn block">追加する</button>
+    </form>
+  </details>
+</section>
+
+<section class="section">
+  <h2>ゴミの日</h2>
+  <div class="list">
+    {% for e in garbage %}
+    <div class="row">
+      <div class="body"><div class="name">{{ e.title }}</div><div class="meta">{{ e.repeat_label }}</div></div>
+      <form method="post" action="{{ url_for('main.event_delete', event_id=e.id) }}">{{ csrf() }}
+        <input type="hidden" name="return_day" value="{{ selected.isoformat() }}">
+        <button class="icon-btn" aria-label="{{ e.title }}を削除" data-confirm="「{{ e.title }}」の収集日を削除しますか？">×</button></form>
+    </div>
+    {% else %}
+    <p class="empty">収集日を登録すると、当日と前日にホームでお知らせします。</p>
+    {% endfor %}
+  </div>
+  <details class="panel" style="margin-top:.75rem">
+    <summary>ゴミの日を追加</summary>
+    <form class="form" method="post" action="{{ url_for('main.event_save') }}">
+      {{ csrf() }}
+      <input type="hidden" name="kind" value="garbage">
+      <input type="hidden" name="return_day" value="{{ selected.isoformat() }}">
+      <input type="hidden" name="day" value="{{ today.isoformat() }}">
+      <label class="field"><span>ゴミの種類</span><input type="text" name="title" maxlength="60" placeholder="例：燃えるゴミ" required></label>
+      <div class="field"><span class="hint">収集の曜日</span>{{ weekday_choices() }}</div>
+      <button class="btn block">追加する</button>
+    </form>
+  </details>
+</section>
+{% endblock %}
