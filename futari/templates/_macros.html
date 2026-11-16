@@ -1,0 +1,46 @@
+{% macro csrf() %}<input type="hidden" name="_csrf" value="{{ csrf_token() }}">{% endmacro %}
+
+{% macro who(member_id, fallback="どちらでも") %}
+{%- if member_id and member_id in names -%}
+<span class="who" style="--who: {{ member_colors[member_id] }}">{{ names[member_id] }}</span>
+{%- else -%}
+<span>{{ fallback }}</span>
+{%- endif -%}
+{% endmacro %}
+
+{# 丸いチェックボタン。color は「完了したら塗る色」 #}
+{% macro check(url, on, color, label, next="", day="") %}
+<form class="check-form" method="post" action="{{ url }}" data-async>
+  {{ csrf() }}
+  {% if next %}<input type="hidden" name="_next" value="{{ next }}">{% endif %}
+  {% if day %}<input type="hidden" name="day" value="{{ day }}">{% endif %}
+  <button class="check{{ ' on' if on }}" style="--who: {{ color }}" aria-pressed="{{ 'true' if on else 'false' }}" aria-label="{{ label }}">
+    <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 5"/></svg>
+  </button>
+</form>
+{% endmacro %}
+
+{% macro weekday_choices(selected=[]) %}
+<div class="choices">
+  {% for w in WEEKDAYS_JA %}
+  <label><input type="checkbox" name="weekdays" value="{{ loop.index0 }}" {{ 'checked' if loop.index0 in selected }}><span>{{ w }}</span></label>
+  {% endfor %}
+</div>
+{% endmacro %}
+
+{% macro assignee_select(selected=None, any_label="どちらでも（空いている方）") %}
+<select name="assignee_id">
+  <option value="">{{ any_label }}</option>
+  {% for m in members %}
+  <option value="{{ m.id }}" {{ 'selected' if m.id == selected }}>{{ m.display_name }}</option>
+  {% endfor %}
+</select>
+{% endmacro %}
+
+{% macro color_choices(selected) %}
+<div class="choices">
+  {% for key, c in COLORS.items() %}
+  <label><input type="radio" name="color" value="{{ key }}" {{ 'checked' if key == selected }}><span class="swatch" style="--who: {{ c[1] }}">{{ c[0] }}</span></label>
+  {% endfor %}
+</div>
+{% endmacro %}

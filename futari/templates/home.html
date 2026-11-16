@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% from "_macros.html" import check, who %}
+{% set active_tab = 'home' %}
+{% block page_attrs %}data-poll{% endblock %}
+{% block content %}
+<header class="today">
+  <p class="date">{{ day.month }}月{{ day.day }}日<small>{{ WEEKDAYS_JA[day.weekday()] }}曜日</small></p>
+  <p class="hello">{{ me.display_name }}さんの今日</p>
+</header>
+
+{% if garbage_today or garbage_tomorrow %}
+<div class="pills">
+  {% for e in garbage_today %}<span class="pill alert">今日は{{ e.title }}の日</span>{% endfor %}
+  {% for e in garbage_tomorrow %}<span class="pill">明日は{{ e.title }}</span>{% endfor %}
+</div>
+{% endif %}
+
+<section class="section">
+  <h2>今日の家事 <a href="{{ url_for('main.chores') }}">すべて見る</a></h2>
+  <div class="list">
+    {% for c in chores %}
+    {% set done_color = member_colors.get(c.log.done_by, '#8b7d70') if c.log else member_colors.get(c.assignee_id, '#8b7d70') %}
+    <div class="row{{ ' done' if c.log }}">
+      {{ check(url_for('main.chore_toggle', chore_id=c.id), c.log, done_color, c.name ~ 'を完了にする', next='/', day=day.isoformat()) }}
+      <div class="body">
+        <div class="name">{{ c.name }}</div>
+        <div class="meta">
+          {% if c.log %}{{ who(c.log.done_by) }} が完了{% else %}担当 {{ who(c.assignee_id) }}{% endif %}
+        </div>
+      </div>
+    </div>
+    {% else %}
+    <p class="empty">今日の家事はありません。<a href="{{ url_for('main.chores') }}">家事を登録する</a></p>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="section">
+  <h2>今日の献立 <a href="{{ url_for('main.meals') }}">今週を見る</a></h2>
+  <div class="list">
+    {% for key, label in slots %}
+    <a class="row" href="{{ url_for('main.meals') }}#d{{ day.isoformat() }}" style="text-decoration:none;color:inherit">
+      <span class="side" style="width:1.6rem;justify-content:center;font-weight:700">{{ label }}</span>
+      <span class="body"><span class="name" {% if not meals.get(key) %}style="color:var(--muted);font-weight:400"{% endif %}>{{ meals[key].title if meals.get(key) else '未定' }}</span></span>
+    </a>
+    {% endfor %}
+  </div>
+</section>
+
+{% if events or events_tomorrow %}
+<section class="section">
+  <h2>予定 <a href="{{ url_for('main.calendar') }}">カレンダー</a></h2>
+  <div class="list">
+    {% for e in events %}
+    <div class="row">
+      <span class="time">{{ e.start_time or '終日' }}</span>
+      <div class="body"><div class="name">{{ e.title }}</div>
+        <div class="meta">{% if e.shared %}二人の予定{% else %}{{ who(e.owner_id) }}{% endif %}</div></div>
+    </div>
+    {% endfor %}
+    {% for e in events_tomorrow %}
+    <div class="row">
+      <span class="time" style="color:var(--muted)">明日</span>
+      <div class="body"><div class="name">{{ e.title }}</div>
+        <div class="meta">{% if e.start_time %}{{ e.start_time }}{% endif %} {% if e.shared %}二人の予定{% else %}{{ who(e.owner_id) }}{% endif %}</div></div>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{% if tasks %}
+<section class="section">
+  <h2>期限が近いタスク <a href="{{ url_for('main.tasks') }}">すべて見る</a></h2>
+  <div class="list">
+    {% for t in tasks %}
+    <div class="row">
+      {{ check(url_for('main.task_toggle', task_id=t.id), false, member_colors.get(t.assignee_id, '#8b7d70'), t.title ~ 'を完了にする', next='/') }}
+      <div class="body"><div class="name">{{ t.title }}</div>
+        <div class="meta"><span class="{{ 'alert-text' if t.due_date <= day.isoformat() }}">{{ fmt_relative(t.due_date) }}まで</span> {{ who(t.assignee_id) }}</div></div>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{% if pantry %}
+<section class="section">
+  <h2>早めに使いたい食材 <a href="{{ url_for('main.pantry') }}">在庫を見る</a></h2>
+  <div class="pills">
+    {% for p in pantry %}<span class="pill {{ 'alert' if p.expires_on <= day.isoformat() }}">{{ p.name }}（{{ fmt_relative(p.expires_on) }}）</span>{% endfor %}
+  </div>
+</section>
+{% endif %}
+
+<section class="section">
+  <a class="btn soft block" href="{{ url_for('main.shopping') }}">
+    {% if shopping_left %}買い物リスト（残り{{ shopping_left }}件）を開く{% else %}買い物リストに追加する{% endif %}
+  </a>
+</section>
+{% endblock %}

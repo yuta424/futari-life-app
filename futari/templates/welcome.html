@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf, color_choices %}
+{% block body %}
+<main class="gate">
+  <h1>はじめの設定</h1>
+  <p class="lead">アプリの中で使う呼び名と、あなたの色を決めます。</p>
+  {% with messages = get_flashed_messages(with_categories=true) %}
+  {% for category, message in messages %}<p class="flash {{ category }}" role="status">{{ message }}</p>{% endfor %}
+  {% endwith %}
+  <form class="form" method="post">
+    {{ csrf() }}
+    <label class="field"><span>呼び名</span>
+      <input type="text" name="display_name" value="{{ request.form.get('display_name', me.display_name) }}" maxlength="20" placeholder="例：ゆうた" required></label>
+    <div class="field"><span class="hint">あなたの色（完了した家事や予定がこの色で表示されます）</span>
+      {{ color_choices(request.form.get('color', me.color)) }}</div>
+    {% if not me.household_id %}
+    <div class="card">
+      <h3>相手から招待コードをもらっている</h3>
+      <label class="field"><span>招待コード（8文字）</span>
+        <input type="text" name="invite_code" maxlength="12" autocapitalize="characters" autocomplete="off" placeholder="例：ABCD2345"></label>
+      <button class="btn block" name="action" value="join" style="margin-top:.8rem">この世帯に参加する</button>
+    </div>
+    <div class="card">
+      <h3>自分が最初に始める</h3>
+      <label class="field"><span>世帯の名前</span>
+        <input type="text" name="household_name" maxlength="30" placeholder="例：わが家"></label>
+      <button class="btn soft block" name="action" value="create" style="margin-top:.8rem">新しく世帯を作る</button>
+      <p class="hint" style="margin-top:.5rem">作成後、設定画面に表示される招待コードを相手に伝えてください。</p>
+    </div>
+    {% else %}
+    <button class="btn block" name="action" value="create">保存して始める</button>
+    {% endif %}
+  </form>
+  <form method="post" action="{{ url_for('main.logout') }}" class="switch">{{ csrf() }}<button class="btn plain">別のアカウントでログインする</button></form>
+</main>
+{% endblock %}

@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf %}
+{% block body %}
+<main class="gate">
+  <div class="mark" aria-hidden="true"><i></i><i></i></div>
+  <h1>ふたり暮らし</h1>
+  <p class="lead">家事・買い物・献立・予定を、二人で同じ画面に。</p>
+  {% with messages = get_flashed_messages(with_categories=true) %}
+  {% for category, message in messages %}<p class="flash {{ category }}" role="status">{{ message }}</p>{% endfor %}
+  {% endwith %}
+  {% if supabase_enabled %}
+  <a class="btn google block" href="{{ url_for('main.auth_google') }}">Googleでログイン</a>
+  <p class="or">または</p>
+  {% endif %}
+  <form class="form" method="post" action="{{ url_for('main.login') }}">
+    {{ csrf() }}
+    <input type="hidden" name="mode" value="{{ mode }}">
+    <label class="field"><span>メールアドレス</span>
+      <input type="email" name="email" value="{{ email }}" autocomplete="email" inputmode="email" required></label>
+    <label class="field"><span>パスワード{% if mode == 'signup' %}（6文字以上）{% endif %}</span>
+      <input type="password" name="password" autocomplete="{{ 'new-password' if mode == 'signup' else 'current-password' }}" minlength="6" required></label>
+    <button class="btn block">{{ 'アカウントを作る' if mode == 'signup' else 'ログイン' }}</button>
+  </form>
+  <p class="switch">
+    {% if mode == 'signup' %}
+    アカウントをお持ちの方は <a href="{{ url_for('main.login') }}">ログイン</a>
+    {% else %}
+    はじめての方は <a href="{{ url_for('main.login', mode='signup') }}">アカウントを作る</a>
+    {% endif %}
+  </p>
+</main>
+{% endblock %}
