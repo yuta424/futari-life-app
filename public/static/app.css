@@ -16,6 +16,7 @@
 }
 
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 html { -webkit-text-size-adjust: 100%; }
 body {
   margin: 0;
@@ -93,8 +94,9 @@ button, input, select, textarea { font: inherit; color: inherit; }
   display: inline-flex; align-items: center; justify-content: center; gap: .4rem;
   border: 0; border-radius: 999px; padding: .65rem 1.2rem; min-height: 2.75rem;
   background: var(--primary); color: #fff; font-weight: 700; cursor: pointer; text-decoration: none;
+  white-space: nowrap; flex: none;
 }
-.btn.block { width: 100%; }
+.btn.block { width: 100%; white-space: normal; }
 .btn.soft { background: var(--primary-soft); color: var(--primary); }
 .btn.plain { background: transparent; color: var(--muted); font-weight: 500; padding: .4rem .6rem; min-height: 2.25rem; }
 .btn.danger { background: transparent; color: var(--alert); font-weight: 500; }

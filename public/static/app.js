@@ -119,7 +119,14 @@
       status.textContent = 'この開き方では通知を使えません。iPhoneでは、Safariの共有メニューから「ホーム画面に追加」し、そのアイコンから開いてください。';
       return;
     }
-    const reg = await navigator.serviceWorker.ready;
+    const reg = await Promise.race([
+      navigator.serviceWorker.ready,
+      new Promise((resolve) => setTimeout(() => resolve(null), 5000)),
+    ]);
+    if (!reg) {
+      status.textContent = '通知の準備ができませんでした。アプリを開き直してからもう一度お試しください。';
+      return;
+    }
     const show = async () => {
       const sub = await reg.pushManager.getSubscription();
       on.hidden = !!sub; off.hidden = !sub; test.hidden = !sub;

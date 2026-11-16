@@ -62,10 +62,21 @@ python -m pytest -q
 ## 進み具合
 
 - [x] DB 定義、DB ラッパー、認証、世帯の作成と招待
-- [x] 画面のルート（views）一式
-- [ ] テンプレート: base / login / welcome / home は作成済み。残り: chores, shopping, meals, recipes, tasks, calendar, pantry, notes, more, settings
-- [ ] `public/static/app.js`（フォームの非同期送信、自動更新、通知の登録）、`public/sw.js`、`public/manifest.webmanifest`、アイコン
-- [ ] `vercel.json`（毎朝の通知用 Cron）、`.env.example`、`scripts/generate_vapid.py`
-- [ ] `gas/calendar_sync.gs`
-- [ ] テスト（tests/test_app.py）
-- [ ] README（Supabase と Vercel の設定手順）
+- [x] 全機能の画面（ホーム、家事、買い物、献立、レシピ、タスク、予定、在庫、生活メモ、設定）
+- [x] PWA（`public/sw.js`、manifest、アイコン）、プッシュ通知の登録と送信、毎朝の通知（`/cron/daily`）
+- [x] Google カレンダーへの反映（iCal 配信 `/cal/<token>.ics`、GAS 用 `/cal/<token>.json`、`gas/calendar_sync.gs`）
+- [x] テスト（`tests/test_app.py`、SQLite とローカル認証で実行）
+- [x] `vercel.json`、`.env.example`、README の公開手順
+
+## まだ確認できていないこと（公開後に試す）
+
+- Supabase の PostgreSQL に実際につないだ動作（`futari/db.py` の psycopg2 側）
+- Supabase Auth でのログイン（メール、Google の PKCE フロー: `futari/auth.py`）
+- 実機（iPhone のホーム画面アプリ）でのプッシュ通知と Vercel Cron
+- `gas/calendar_sync.gs` の実行
+
+## この先の候補
+
+- 圏外でのチェック操作（いまは直前の画面の表示だけ。操作は通信が必要）
+- 献立の提案（在庫から）、買い物リストの並べ替え
+- 家計アプリ（OsidOri）の共有支出・精算額をホームに表示
